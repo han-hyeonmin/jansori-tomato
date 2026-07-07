@@ -1,0 +1,29 @@
+name: Release
+
+# v* 태그를 push하면 .app을 빌드해 zip으로 묶어 GitHub Release에 올린다.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Package release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          Scripts/package-release.sh "$VERSION"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/JansoriTomato-*.zip
+          generate_release_notes: true

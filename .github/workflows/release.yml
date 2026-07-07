@@ -14,13 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Show toolchain
+        run: swift --version
 
-      - name: Package release
+      - name: Generate app icon
+        run: bash Scripts/make-icon.sh
+
+      - name: Build .app bundle
+        run: bash Scripts/bundle-app.sh release
+
+      - name: Package zip
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          Scripts/package-release.sh "$VERSION"
+          ditto -c -k --keepParent "build/Jansori Tomato.app" "build/JansoriTomato-${VERSION}.zip"
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2

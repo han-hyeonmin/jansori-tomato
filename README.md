@@ -37,11 +37,16 @@ Requires **macOS 13 (Ventura) or later**.
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
 
+The tap clears macOS's quarantine flag on install, so the app just opens.
+
 ### Manual download
 
 Download the latest `JansoriTomato-x.y.z.zip` from [Releases](https://github.com/han-hyeonmin/jansori-tomato/releases), unzip, and drag **Jansori Tomato.app** to `/Applications`.
 
-> **First launch:** the app isn't code-signed yet, so macOS Gatekeeper blocks it. Right-click the app → **Open** → **Open** (once). This applies to the Homebrew install too.
+> The app is ad-hoc signed but **not notarized** yet. If macOS says it's **"damaged"** or won't open, clear the quarantine flag once:
+> ```bash
+> xattr -dr com.apple.quarantine "/Applications/Jansori Tomato.app"
+> ```
 
 ### Build from source
 

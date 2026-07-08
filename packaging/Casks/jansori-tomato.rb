@@ -3,8 +3,8 @@
 # Bump version/sha256 on each release (Scripts/package-release.sh prints the sha256).
 
 cask "jansori-tomato" do
-  version "0.1.1"
-  sha256 "3d04b2a30784fef50bec4d97c7ac617895e06e122db143270828b85de30626c6"
+  version "0.1.2"
+  sha256 "588b464a4440d690d607accef71356a3ac3da3ae51fd52b2d4dd696fad5f602f"
 
   url "https://github.com/han-hyeonmin/jansori-tomato/releases/download/v#{version}/JansoriTomato-#{version}.zip"
   name "Jansori Tomato"
@@ -17,6 +17,13 @@ cask "jansori-tomato" do
   end
 
   app "Jansori Tomato.app"
+
+  # The app is ad-hoc signed but not notarized yet, so macOS quarantines it.
+  # Clear the flag on install so it opens without the Gatekeeper "damaged" error.
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-dr", "com.apple.quarantine", "#{appdir}/Jansori Tomato.app"]
+  end
 
   zap trash: [
     "~/Library/Preferences/com.hanhyeonmin.jansoritomato.plist",

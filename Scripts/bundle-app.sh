@@ -34,5 +34,10 @@ else
     echo "⚠︎ AppIcon.icns 없음 — Scripts/make-icon.sh 로 생성하세요."
 fi
 
+# 번들 전체를 ad-hoc 서명한다. (안 하면 링커 서명이 번들 리소스와 어긋나
+# 격리 상태에서 "손상됨"으로 뜬다. Developer ID/공증은 아직 없음.)
+echo "▶︎ ad-hoc 코드 서명"
+codesign --force --deep --sign - "$APP_DIR"
+
 echo "✓ 완료: $ROOT_DIR/$APP_DIR"
 echo "  실행: open \"$APP_DIR\""

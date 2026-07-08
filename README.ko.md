@@ -37,11 +37,16 @@
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
 
+설치 시 tap이 macOS 격리(quarantine) 속성을 자동으로 제거하므로 바로 열립니다.
+
 ### 직접 다운로드
 
 [Releases](https://github.com/han-hyeonmin/jansori-tomato/releases)에서 최신 `JansoriTomato-x.y.z.zip`을 받아 압축을 풀고 **Jansori Tomato.app**을 `/Applications`로 드래그합니다.
 
-> **첫 실행:** 아직 코드 서명이 안 돼 있어 Gatekeeper가 막습니다. 앱을 **우클릭 → 열기 → 열기** 하면 됩니다(최초 1회). Homebrew로 설치해도 동일합니다.
+> 앱은 ad-hoc 서명은 돼 있지만 아직 **공증(notarize) 전**입니다. macOS가 **"손상됨"** 이라며 안 열리면 격리 속성을 한 번 제거하세요:
+> ```bash
+> xattr -dr com.apple.quarantine "/Applications/Jansori Tomato.app"
+> ```
 
 ### 소스에서 빌드
 

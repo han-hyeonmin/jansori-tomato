@@ -7,6 +7,7 @@ struct PomodoroTimerApp: App {
     @StateObject private var checkIn: CheckInController
     @StateObject private var breakOverlay: BreakOverlayController
     @StateObject private var notifications: NotificationManager
+    @StateObject private var sound: SoundManager
 
     init() {
         let engine = TimerEngine()
@@ -14,6 +15,12 @@ struct PomodoroTimerApp: App {
         _checkIn = StateObject(wrappedValue: CheckInController(engine: engine))
         _breakOverlay = StateObject(wrappedValue: BreakOverlayController(engine: engine))
         _notifications = StateObject(wrappedValue: NotificationManager(engine: engine))
+        _sound = StateObject(wrappedValue: SoundManager(engine: engine))
+
+        // 디버그: AUTOSTART=1 → 실행 즉시 집중 세션 시작(메뉴바 카운트다운 스크린샷용).
+        if ProcessInfo.processInfo.environment["AUTOSTART"] == "1" {
+            engine.start()
+        }
     }
 
     var body: some Scene {
@@ -32,5 +39,7 @@ struct PomodoroTimerApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // 새 버전 확인(백그라운드, 앱당 1회).
+        UpdateChecker.shared.checkOnce()
     }
 }

@@ -21,9 +21,13 @@ A macOS menu bar Pomodoro timer with an attitude. During a focus session, a pair
 
 ## Screenshots
 
-<img src="assets/panel-en.png" width="280" alt="Menu bar control panel">
+The countdown lives in your menu bar:
 
-Click the menu bar tomato for the timer. When a focus session ends, a full-screen break takes over:
+<img src="assets/menubar.png" width="110" alt="Menu bar countdown">
+
+Click it for the full control panel — with a full-screen break when the session ends:
+
+<img src="assets/panel-en.png" width="280" alt="Menu bar control panel">
 
 <img src="assets/break-en.png" width="680" alt="Full-screen break screen">
 

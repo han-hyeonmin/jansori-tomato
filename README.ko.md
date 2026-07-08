@@ -21,9 +21,13 @@
 
 ## 스크린샷
 
-<img src="assets/panel-ko.png" width="280" alt="메뉴바 컨트롤 패널">
+카운트다운은 메뉴바에 표시됩니다:
 
-메뉴바 토마토를 누르면 타이머가 열립니다. 집중이 끝나면 전체화면 휴식이 작업을 멈춰 줍니다:
+<img src="assets/menubar.png" width="110" alt="메뉴바 카운트다운">
+
+클릭하면 전체 컨트롤 패널이 열리고, 집중이 끝나면 전체화면 휴식이 작업을 멈춰 줍니다:
+
+<img src="assets/panel-ko.png" width="280" alt="메뉴바 컨트롤 패널">
 
 <img src="assets/break-ko.png" width="680" alt="전체화면 휴식">
 

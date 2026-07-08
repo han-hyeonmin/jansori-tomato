@@ -162,6 +162,11 @@ final class TimerEngine: ObservableObject {
         defaults.set(Self.todayString(), forKey: Keys.todayDate)
     }
 
+    /// 모든 설정(시간·주기·감시·사운드·언어 외)을 기본값으로 되돌린다.
+    func resetSettings() {
+        settings = .default
+    }
+
     // MARK: 타이머 루프
 
     private func scheduleTimer() {

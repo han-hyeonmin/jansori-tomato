@@ -5,6 +5,7 @@ struct ControlPanelView: View {
     @ObservedObject var engine: TimerEngine
     let checkIn: CheckInController
     @ObservedObject private var loc = LocalizationManager.shared
+    @ObservedObject private var updates = UpdateChecker.shared
     @State private var showSettings = false
 
     /// 팝오버 고정 높이(접힌 내용에 딱 맞춤 — 측정값 418 + 여유). nil이면 내용 크기에 맞춘다.
@@ -23,6 +24,9 @@ struct ControlPanelView: View {
 
     private var content: some View {
         VStack(spacing: 16) {
+            if let version = updates.availableUpdate {
+                updateBanner(version)
+            }
             sessionHeader
             timerRing
             controlButtons
@@ -184,6 +188,18 @@ struct ControlPanelView: View {
             }
             .pickerStyle(.menu)
             .font(.subheadline)
+
+            Button {
+                engine.resetSettings()
+            } label: {
+                Label(loc("기본값으로 초기화", "Reset to defaults"), systemImage: "arrow.counterclockwise")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .font(.subheadline)
+            .help(loc("시간·주기·감시·사운드 설정을 기본값으로 되돌립니다",
+                      "Reset durations, interval, watching eyes, and sound to defaults"))
         }
     }
 
@@ -208,6 +224,7 @@ struct ControlPanelView: View {
         .controlSize(.small)
     }
 
+    /// 라벨 + 직접 입력 가능한 숫자 필드 + 스텝퍼. 값은 범위로 clamp된다.
     private func durationStepper(
         _ label: String,
         value: Binding<Int>,
@@ -215,16 +232,53 @@ struct ControlPanelView: View {
         unit: String? = nil
     ) -> some View {
         let unitText = unit ?? loc("분", "m")
-        return Stepper(value: value, in: range) {
-            HStack {
-                Text(label)
-                Spacer()
-                Text("\(value.wrappedValue)\(unitText)")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
+        let bound = clamped(value, range)
+        return HStack(spacing: 6) {
+            Text(label)
+            Spacer()
+            TextField("", value: bound, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 42)
+                .multilineTextAlignment(.trailing)
+                .monospacedDigit()
+            Text(unitText)
+                .foregroundStyle(.secondary)
+            Stepper("", value: bound, in: range)
+                .labelsHidden()
         }
         .font(.subheadline)
+    }
+
+    /// 범위를 벗어나지 않게 clamp하는 바인딩.
+    private func clamped(_ value: Binding<Int>, _ range: ClosedRange<Int>) -> Binding<Int> {
+        Binding(
+            get: { value.wrappedValue },
+            set: { value.wrappedValue = min(max($0, range.lowerBound), range.upperBound) }
+        )
+    }
+
+    /// 새 버전 알림 배너.
+    private func updateBanner(_ version: String) -> some View {
+        Button {
+            updates.openLatestRelease()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.circle.fill")
+                Text(loc("새 버전 v\(version)", "Update available — v\(version)"))
+                    .fontWeight(.medium)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+            }
+            .font(.caption)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.15))
+            )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
     }
 
     // MARK: 푸터

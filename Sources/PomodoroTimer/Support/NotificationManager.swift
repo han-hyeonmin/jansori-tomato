@@ -44,9 +44,7 @@ final class NotificationManager: ObservableObject {
             content.title = loc("휴식 끝 ☕️", "Break over ☕️")
             content.body = loc("다시 집중할 준비됐나요?", "Ready to focus again?")
         }
-        if engine.settings.soundEnabled {
-            content.sound = .default
-        }
+        // 사운드는 SoundManager가 NSSound로 직접 재생한다(알림 권한과 무관하게 보장).
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,

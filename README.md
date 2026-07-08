@@ -4,7 +4,11 @@
 
 A macOS menu bar Pomodoro timer with a twist: a cute pair of eyes peeks out from your menu bar during focus sessions to *nag* you about staying on task. ("Jansori" / 잔소리 is Korean for nagging.) When it's time to rest, a calm full-screen break takes over — and nudges you back when you're ready.
 
-> Status: early release (v0.1.0). See [PRD.md](PRD.md) for the full plan.
+<p align="center">
+  <img src="assets/peek-en.png" width="620" alt="Watching eyes peeking from the menu bar with a nagging speech bubble">
+</p>
+
+> Status: early release (v0.1.1).
 
 ## Features
 
@@ -14,6 +18,14 @@ A macOS menu bar Pomodoro timer with a twist: a cute pair of eyes peeks out from
 - **Native notifications** on session changes, with an optional completion sound.
 - **Bilingual** — English / Korean, switchable in-app.
 - **Launch at login**, no Dock icon (menu bar only).
+
+## Screenshots
+
+<img src="assets/panel-en.png" width="280" alt="Menu bar control panel">
+
+Click the menu bar tomato for the timer. When a focus session ends, a full-screen break takes over:
+
+<img src="assets/break-en.png" width="680" alt="Full-screen break screen">
 
 ## Requirements
 
@@ -34,8 +46,6 @@ Grab the latest `JansoriTomato-x.y.z.zip` from [Releases](https://github.com/han
 # Planned — via a personal tap
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
-
-See [docs/HOMEBREW.md](docs/HOMEBREW.md) for the publishing plan.
 
 ### Build from source
 
@@ -76,8 +86,8 @@ Dev tips: `CHECKIN_PREVIEW=1 swift run` shows the character immediately; `BREAK_
 - [x] Watching-eyes check-in character (menu bar peek, cursor tracking, speech bubble, randomized timing)
 - [x] Full-screen break overlay (auto-start + resume prompt)
 - [x] Native notifications + sound, launch at login, bilingual, app icon
-- [x] GitHub release (v0.1.0)
-- [ ] Homebrew cask
+- [x] GitHub release + Homebrew tap (v0.1.1)
+- [ ] Submit to `homebrew/cask`
 - [ ] Code signing / notarization
 
 ## License

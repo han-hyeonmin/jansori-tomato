@@ -10,3 +10,8 @@ xcuserdata/
 .omc/
 AppIcon.icns
 AppIcon.iconset/
+
+# internal planning docs (not published)
+PRD.md
+docs/HOMEBREW.md
+docs/RAYCAST.md

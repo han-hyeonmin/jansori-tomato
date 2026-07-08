@@ -4,7 +4,7 @@
 
 cask "jansori-tomato" do
   version "0.1.2"
-  sha256 "588b464a4440d690d607accef71356a3ac3da3ae51fd52b2d4dd696fad5f602f"
+  sha256 "00ad6806e574eb629bc5cc9bfee56c0b6eb767a388d728a4806a9a65bb93cf55"
 
   url "https://github.com/han-hyeonmin/jansori-tomato/releases/download/v#{version}/JansoriTomato-#{version}.zip"
   name "Jansori Tomato"

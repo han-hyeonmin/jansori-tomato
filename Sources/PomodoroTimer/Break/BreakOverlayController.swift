@@ -54,10 +54,11 @@ final class BreakOverlayController: ObservableObject {
 
     // MARK: 사용자 액션
 
-    /// resting: 휴식을 끝내고 바로 집중 시작.
+    /// resting: 휴식을 끝내고 바로 집중 시작. 오버레이는 확실히 닫는다.
     func startFocusFromRest() {
-        engine.skip()          // break → focus(idle) (onSessionEnd(break,false)로 dismiss됨)
+        if engine.sessionType != .focus { engine.skip() }   // 휴식 → 집중(idle)
         engine.start()
+        dismiss()
     }
 
     /// ready: 다음 집중 세션 시작.

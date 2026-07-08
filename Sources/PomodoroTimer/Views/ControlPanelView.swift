@@ -36,6 +36,11 @@ struct ControlPanelView: View {
             }
             .font(.subheadline)
 
+            if showSettings {
+                Divider()
+                resetButtons
+            }
+
             Divider()
 
             footer
@@ -89,7 +94,12 @@ struct ControlPanelView: View {
             }
             .help(loc("현재 세션 리셋", "Reset session"))
 
-            Button(action: engine.toggle) {
+            Button {
+                let wasRunning = engine.isRunning
+                engine.toggle()
+                // 방금 "시작"을 눌렀다면(일시정지가 아니라) 팝오버를 닫아 집중에 들어가게 한다.
+                if !wasRunning { dismissPopover() }
+            } label: {
                 Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
                     .frame(width: 28, height: 28)
                     .font(.title2)
@@ -174,27 +184,28 @@ struct ControlPanelView: View {
             }
             .pickerStyle(.menu)
             .font(.subheadline)
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Button(loc("사이클 초기화", "Reset cycle")) {
-                    engine.resetCycle()
-                }
-                .frame(maxWidth: .infinity)
-                .help(loc("4개 집중 사이클 진행을 0으로 되돌립니다",
-                          "Reset the 4-session cycle progress to zero"))
-
-                Button(loc("통계 초기화", "Reset stats")) {
-                    engine.resetStats()
-                }
-                .frame(maxWidth: .infinity)
-                .help(loc("오늘 완료한 집중 수를 0으로 되돌립니다",
-                          "Reset today's completed focus count to zero"))
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
+    }
+
+    /// 초기화 버튼들(설정 펼침 시 설정 아래에 표시).
+    private var resetButtons: some View {
+        HStack(spacing: 8) {
+            Button(loc("사이클 초기화", "Reset cycle")) {
+                engine.resetCycle()
+            }
+            .frame(maxWidth: .infinity)
+            .help(loc("4개 집중 사이클 진행을 0으로 되돌립니다",
+                      "Reset the 4-session cycle progress to zero"))
+
+            Button(loc("통계 초기화", "Reset stats")) {
+                engine.resetStats()
+            }
+            .frame(maxWidth: .infinity)
+            .help(loc("오늘 완료한 집중 수를 0으로 되돌립니다",
+                      "Reset today's completed focus count to zero"))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
     }
 
     private func durationStepper(
@@ -231,8 +242,20 @@ struct ControlPanelView: View {
         }
     }
 
-    /// 메뉴바 팝오버(현재 key 창)를 닫는다. 미리보기 등장 시 창이 가리지 않도록.
+    /// 메뉴바 팝오버를 닫는다. 버튼 이벤트가 끝난 뒤(next runloop) 닫아야 안정적이다.
     private func dismissPopover() {
-        NSApp.keyWindow?.close()
+        DispatchQueue.main.async {
+            if let key = NSApp.keyWindow {
+                key.close()
+                return
+            }
+            // 폴백: MenuBarExtra 팝오버 창을 찾아 닫는다.
+            for window in NSApp.windows {
+                let name = String(describing: type(of: window))
+                if name.contains("MenuBarExtra") || name.contains("Popover") {
+                    window.close()
+                }
+            }
+        }
     }
 }

@@ -1,20 +1,23 @@
 import Foundation
 
 /// 감시 캐릭터 말풍선에 번갈아 띄울 문구 템플릿(한/영).
-/// 집중 여부를 귀엽게 확인하는 톤. 등장할 때마다 순서대로 하나씩 꺼낸다.
+/// "잔소리 토마토" 컨셉 — 엄마의 잔소리처럼 재치있게(정겹게) 집중을 채근한다.
+/// 말풍선 폭(약 220pt)에 맞도록 짧게 유지.
 enum CheckInMessages {
     /// (한국어, 영어) 쌍.
     static let all: [(ko: String, en: String)] = [
-        ("집중하고 있나요? 👀", "Still focused? 👀"),
-        ("딴짓 중은 아니죠?", "Not slacking, right?"),
-        ("잘하고 있어요, 계속!", "Doing great, keep going!"),
-        ("화면 잘 보고 있어요", "I'm watching 👀"),
-        ("혹시 유튜브...?", "Is that... YouTube?"),
-        ("지켜보고 있어요 👀", "Eyes on you 👀"),
-        ("오, 열심이네요!", "Ooh, nice hustle!"),
-        ("조금만 더 힘내요", "A little more, you got this"),
-        ("눈 안 떼고 있어요", "Not blinking away"),
-        ("그 탭 맞나요? 👀", "Right tab? 👀")
+        ("딴짓하지 말랬지? 👀", "No goofing off~ 👀"),
+        ("다 보고 있다 👀", "I see everything 👀"),
+        ("그거 일 맞아? 👀", "Is that... work? 👀"),
+        ("핸드폰 그만 보고~", "Phone down, please~"),
+        ("이러다 밤새운다", "You'll be up all night~"),
+        ("허리 펴고 앉아", "Sit up straight now"),
+        ("5분만 더 하자, 응?", "5 more minutes, hmm?"),
+        ("눈 나빠진다, 집중!", "Focus—or ruin your eyes"),
+        ("지금 노는 거 아니지?", "Not slacking, right?"),
+        ("다 하고 쉬어", "Finish first, rest later"),
+        ("한눈팔지 말고~", "Eyes on the task~"),
+        ("눈 똑바로 뜨고 있다 👀", "Keeping an eye on you 👀")
     ]
 
     /// 순환 인덱스 + 현재 언어에 해당하는 문구.

@@ -6,8 +6,8 @@
 #   Scripts/package-release.sh   # sha256 출력
 
 cask "jansori-tomato" do
-  version "0.1.0"
-  sha256 "ea08d279132f7701b197e1a49b9cbe3ddfe065a98a4e67632889123788e4070b"
+  version "0.1.1"
+  sha256 "3d04b2a30784fef50bec4d97c7ac617895e06e122db143270828b85de30626c6"
 
   url "https://github.com/han-hyeonmin/jansori-tomato/releases/download/v#{version}/JansoriTomato-#{version}.zip"
   name "Jansori Tomato"

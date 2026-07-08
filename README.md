@@ -2,10 +2,10 @@
 
 **English** · [한국어](README.ko.md)
 
-A macOS menu bar Pomodoro timer with a twist: a cute pair of eyes peeks out from your menu bar during focus sessions to *nag* you about staying on task. ("Jansori" / 잔소리 is Korean for nagging.) When it's time to rest, a calm full-screen break takes over — and nudges you back when you're ready.
+A macOS menu bar Pomodoro timer with an attitude. During a focus session, a pair of eyes peeks out of your menu bar, follows your cursor, and *nags* you to stay on task — *jansori* (잔소리) is Korean for nagging. When the timer's up, a calm full-screen break takes over, then nudges you back when you're ready.
 
 <p align="center">
-  <img src="assets/peek-en.png" width="620" alt="Watching eyes peeking from the menu bar with a nagging speech bubble">
+  <img src="assets/peek-en.gif" width="500" alt="Watching eyes peeking out of the menu bar and following the cursor">
 </p>
 
 > Status: early release (v0.1.1).
@@ -13,7 +13,7 @@ A macOS menu bar Pomodoro timer with a twist: a cute pair of eyes peeks out from
 ## Features
 
 - **Menu bar timer** — focus / short break / long break, live countdown in the menu bar.
-- **Watching eyes 👀** — during focus, an eyes-only character peeks down from the menu bar at random intervals, tracks your cursor, and speaks a rotating check-in line ("Still focused? 👀"). Click-through and non-intrusive.
+- **Watching eyes 👀** — during focus, a pair of eyes drops out of the menu bar at random intervals, tracks your cursor, and drops a rotating one-liner ("No goofing off~ 👀"). Click-through, so it never gets in your way.
 - **Full-screen breaks (Flow-style)** — when focus ends, a frosted break screen takes over so you actually rest. Close it anytime; when the break ends, a "resume focus" prompt pops up on its own.
 - **Native notifications** on session changes, with an optional completion sound.
 - **Bilingual** — English / Korean, switchable in-app.
@@ -27,25 +27,21 @@ Click the menu bar tomato for the timer. When a focus session ends, a full-scree
 
 <img src="assets/break-en.png" width="680" alt="Full-screen break screen">
 
-## Requirements
-
-- macOS 13 (Ventura) or later
-- Swift toolchain (Command Line Tools or full Xcode)
-
 ## Install
 
-### Download
+Requires **macOS 13 (Ventura) or later**.
 
-Grab the latest `JansoriTomato-x.y.z.zip` from [Releases](https://github.com/han-hyeonmin/jansori-tomato/releases), unzip, and move **Jansori Tomato.app** to `/Applications`.
-
-> The app is currently **unsigned**, so on first launch macOS Gatekeeper will warn you. Right-click the app → **Open** → **Open** to allow it (only needed once).
-
-### Homebrew (coming soon)
+### Homebrew (recommended)
 
 ```bash
-# Planned — via a personal tap
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
+
+### Manual download
+
+Download the latest `JansoriTomato-x.y.z.zip` from [Releases](https://github.com/han-hyeonmin/jansori-tomato/releases), unzip, and drag **Jansori Tomato.app** to `/Applications`.
+
+> **First launch:** the app isn't code-signed yet, so macOS Gatekeeper blocks it. Right-click the app → **Open** → **Open** (once). This applies to the Homebrew install too.
 
 ### Build from source
 

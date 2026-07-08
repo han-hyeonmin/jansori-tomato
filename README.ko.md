@@ -2,10 +2,10 @@
 
 [English](README.md) · **한국어**
 
-한 끗 다른 macOS 메뉴바 뽀모도로 타이머. 집중 시간에는 귀여운 눈 한 쌍(👀)이 메뉴바에서 쑥 튀어나와 "딴짓하지 말라"고 **잔소리**하고, 휴식 시간에는 잔잔한 전체화면이 작업을 멈춰 줍니다. 준비되면 다시 집중하도록 부드럽게 불러옵니다.
+잔소리하는 macOS 메뉴바 뽀모도로 타이머. 집중하는 동안 눈 한 쌍(👀)이 메뉴바에서 쑥 튀어나와 커서를 좇으며 "딴짓하지 말라"고 **잔소리**합니다. 시간이 끝나면 잔잔한 전체화면 휴식이 작업을 멈춰 주고, 준비되면 다시 집중하도록 불러옵니다.
 
 <p align="center">
-  <img src="assets/peek-ko.png" width="620" alt="메뉴바에서 튀어나와 잔소리하는 감시 캐릭터">
+  <img src="assets/peek-ko.gif" width="500" alt="메뉴바에서 튀어나와 커서를 따라가는 감시 캐릭터">
 </p>
 
 > 상태: 초기 릴리즈 (v0.1.1).
@@ -13,7 +13,7 @@
 ## 기능
 
 - **메뉴바 타이머** — 집중 / 짧은 휴식 / 긴 휴식, 남은 시간 메뉴바 표시.
-- **감시하는 눈 👀** — 집중 중 눈알 캐릭터가 **무작위 간격**으로 메뉴바에서 아래로 튀어나와 커서를 좇고, 번갈아 바뀌는 문구로 잔소리합니다("집중하고 있나요? 👀"). 클릭 통과, 방해 없음.
+- **감시하는 눈 👀** — 집중 중 눈 한 쌍이 **무작위 간격**으로 메뉴바에서 튀어나와 커서를 좇으며 잔소리를 던집니다("딴짓하지 말랬지? 👀"). 클릭이 통과돼 작업을 방해하지 않습니다.
 - **전체화면 휴식 (Flow 앱 방식)** — 집중이 끝나면 프로스트 블러 휴식 화면이 떠서 진짜로 쉬게 합니다. 언제든 닫을 수 있고, 휴식이 끝나면 "집중 다시 시작" 프롬프트가 알아서 팝업됩니다.
 - **네이티브 알림** — 세션 전환 시 알림, 완료 사운드(옵션).
 - **한/영 지원** — 앱 안에서 즉시 전환.
@@ -27,25 +27,21 @@
 
 <img src="assets/break-ko.png" width="680" alt="전체화면 휴식">
 
-## 요구 사항
-
-- macOS 13 (Ventura) 이상
-- Swift 툴체인 (Command Line Tools 또는 전체 Xcode)
-
 ## 설치
 
-### 다운로드
+**macOS 13 (Ventura) 이상** 필요.
 
-[Releases](https://github.com/han-hyeonmin/jansori-tomato/releases)에서 최신 `JansoriTomato-x.y.z.zip`을 받아 압축을 풀고 **Jansori Tomato.app**을 `/Applications`로 옮깁니다.
-
-> 현재 **미서명** 앱이라 처음 열 때 Gatekeeper 경고가 뜹니다. 앱을 **우클릭 → 열기 → 열기** 하면 됩니다(최초 1회).
-
-### Homebrew (지원 예정)
+### Homebrew (권장)
 
 ```bash
-# 준비 중 — 개인 tap 경유
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
+
+### 직접 다운로드
+
+[Releases](https://github.com/han-hyeonmin/jansori-tomato/releases)에서 최신 `JansoriTomato-x.y.z.zip`을 받아 압축을 풀고 **Jansori Tomato.app**을 `/Applications`로 드래그합니다.
+
+> **첫 실행:** 아직 코드 서명이 안 돼 있어 Gatekeeper가 막습니다. 앱을 **우클릭 → 열기 → 열기** 하면 됩니다(최초 1회). Homebrew로 설치해도 동일합니다.
 
 ### 소스에서 빌드
 

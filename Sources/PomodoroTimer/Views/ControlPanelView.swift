@@ -7,6 +7,7 @@ struct ControlPanelView: View {
     @ObservedObject private var loc = LocalizationManager.shared
     @ObservedObject private var updates = UpdateChecker.shared
     @State private var showSettings = false
+    @State private var updateCopied = false
 
     /// 팝오버 고정 높이(접힌 내용에 딱 맞춤 — 측정값 418 + 여유). nil이면 내용 크기에 맞춘다.
     var fixedHeight: CGFloat? = 419
@@ -257,17 +258,24 @@ struct ControlPanelView: View {
         )
     }
 
-    /// 새 버전 알림 배너.
+    /// 새 버전 알림 배너. 클릭하면 `brew upgrade` 명령을 복사한다(Homebrew 업데이트).
     private func updateBanner(_ version: String) -> some View {
         Button {
-            updates.openLatestRelease()
+            updates.copyUpgradeCommand()
+            updateCopied = true
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                updateCopied = false
+            }
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "arrow.down.circle.fill")
-                Text(loc("새 버전 v\(version)", "Update available — v\(version)"))
+                Image(systemName: updateCopied ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                Text(updateCopied
+                     ? loc("복사됨 · 터미널에 붙여넣기", "Copied · paste in Terminal")
+                     : loc("새 버전 v\(version) · brew upgrade", "Update v\(version) · brew upgrade"))
                     .fontWeight(.medium)
                 Spacer()
-                Image(systemName: "arrow.up.right")
+                Image(systemName: "doc.on.doc")
             }
             .font(.caption)
             .padding(.horizontal, 10)
@@ -279,6 +287,7 @@ struct ControlPanelView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.accentColor)
+        .help(loc("클릭하면 brew upgrade 명령을 복사합니다", "Click to copy the brew upgrade command"))
     }
 
     // MARK: 푸터

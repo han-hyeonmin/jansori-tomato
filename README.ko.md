@@ -41,7 +41,7 @@
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
 
-설치 시 tap이 macOS 격리(quarantine) 속성을 자동으로 제거하므로 바로 열립니다.
+설치 시 tap이 macOS 격리(quarantine) 속성을 자동으로 제거하므로 바로 열립니다. 이후 업데이트는 `brew upgrade --cask jansori-tomato` — 새 버전이 나오면 앱이 배너로도 알려줍니다.
 
 ### 직접 다운로드
 

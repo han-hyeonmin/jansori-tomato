@@ -41,7 +41,7 @@ Requires **macOS 13 (Ventura) or later**.
 brew install --cask han-hyeonmin/tap/jansori-tomato
 ```
 
-The tap clears macOS's quarantine flag on install, so the app just opens.
+The tap clears macOS's quarantine flag on install, so the app just opens. Update later with `brew upgrade --cask jansori-tomato` — the app also shows a banner when a new version is out.
 
 ### Manual download
 

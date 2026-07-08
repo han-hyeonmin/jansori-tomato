@@ -48,9 +48,13 @@ final class UpdateChecker: ObservableObject {
         }
     }
 
-    func openLatestRelease() {
-        if let url = URL(string: "https://github.com/\(repo)/releases/latest") {
-            NSWorkspace.shared.open(url)
-        }
+    /// Homebrew 업데이트 명령.
+    let upgradeCommand = "brew upgrade --cask jansori-tomato"
+
+    /// 업데이트 명령을 클립보드에 복사한다(터미널에 붙여넣어 실행).
+    func copyUpgradeCommand() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(upgradeCommand, forType: .string)
     }
 }

@@ -32,6 +32,10 @@ final class NotificationManager: ObservableObject {
     private func handle(finished: SessionType, completedNormally: Bool) {
         guard completedNormally else { return }
 
+        // 이미 다음 세션으로 넘어갔으므로, 알림 센터에 남아 있는 지난 전환 알림들을
+        // 먼저 지운다. 이렇게 하면 알림이 쌓이지 않고 항상 최신 것 하나만 남는다.
+        center.removeAllDeliveredNotifications()
+
         let loc = LocalizationManager.shared
         let content = UNMutableNotificationContent()
         if finished == .focus {

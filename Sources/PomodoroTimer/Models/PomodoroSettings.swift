@@ -14,6 +14,10 @@ struct PomodoroSettings: Codable, Equatable {
     var checkInIntervalMinutes: Int
     /// 세션 완료 사운드 재생 여부.
     var soundEnabled: Bool
+    /// 완료 사운드 음량(0.0 ~ 1.0).
+    var soundVolume: Double
+    /// 휴식 시 전체화면 오버레이 대신 알림음만 재생.
+    var soundOnlyBreak: Bool
 
     static let `default` = PomodoroSettings(
         focusMinutes: 25,
@@ -21,7 +25,9 @@ struct PomodoroSettings: Codable, Equatable {
         longBreakMinutes: 15,
         longBreakInterval: 4,
         checkInIntervalMinutes: 5,
-        soundEnabled: true
+        soundEnabled: true,
+        soundVolume: 0.8,
+        soundOnlyBreak: false
     )
 
     /// 각 세션 종류의 길이를 초 단위로 반환.
@@ -42,7 +48,7 @@ struct PomodoroSettings: Codable, Equatable {
 extension PomodoroSettings {
     private enum CodingKeys: String, CodingKey {
         case focusMinutes, shortBreakMinutes, longBreakMinutes
-        case longBreakInterval, checkInIntervalMinutes, soundEnabled
+        case longBreakInterval, checkInIntervalMinutes, soundEnabled, soundVolume, soundOnlyBreak
     }
 
     init(from decoder: Decoder) throws {
@@ -54,6 +60,8 @@ extension PomodoroSettings {
         longBreakInterval = try c.decodeIfPresent(Int.self, forKey: .longBreakInterval) ?? d.longBreakInterval
         checkInIntervalMinutes = try c.decodeIfPresent(Int.self, forKey: .checkInIntervalMinutes) ?? d.checkInIntervalMinutes
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? d.soundEnabled
+        soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? d.soundVolume
+        soundOnlyBreak = try c.decodeIfPresent(Bool.self, forKey: .soundOnlyBreak) ?? d.soundOnlyBreak
     }
 }
 

@@ -40,6 +40,12 @@ final class BreakOverlayController: ObservableObject {
     // MARK: 세션 전환 반응
 
     private func handle(finished: SessionType, completedNormally: Bool) {
+        // "알림음만" 모드: 전체화면 오버레이 없이 사운드/알림만으로 전환을 알린다.
+        // (사운드·알림은 각자의 옵저버가 처리하므로 여기선 오버레이만 생략)
+        if engine.settings.soundOnlyBreak {
+            dismiss()
+            return
+        }
         if finished == .focus {
             // 집중 종료 → 휴식 시작. 전체화면으로 작업을 가린다.
             present(mode: .resting)

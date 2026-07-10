@@ -20,6 +20,19 @@ final class SoundManager: ObservableObject {
         guard completedNormally, engine.settings.soundEnabled else { return }
         // 집중 완료는 또렷한 소리, 휴식 완료는 부드러운 소리.
         let name = finished == .focus ? "Glass" : "Tink"
-        NSSound(named: name)?.play()
+        play(named: name)
+    }
+
+    /// 설정의 음량 슬라이더에서 호출 — 현재 음량으로 완료음을 미리 들려준다.
+    func previewCompletionSound() {
+        play(named: "Glass")
+    }
+
+    private func play(named name: String) {
+        guard let sound = NSSound(named: name) else { return }
+        // 같은 NSSound가 재생 중이면 겹치지 않게 멈추고 처음부터.
+        if sound.isPlaying { sound.stop() }
+        sound.volume = Float(min(1, max(0, engine.settings.soundVolume)))
+        sound.play()
     }
 }

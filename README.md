@@ -8,14 +8,15 @@ A macOS menu bar Pomodoro timer with an attitude. During a focus session, a pair
   <img src="assets/peek-en.gif" width="500" alt="Watching eyes peeking out of the menu bar and following the cursor">
 </p>
 
-> Status: early release (v0.1.3).
+> Status: early release (v0.1.4).
 
 ## Features
 
 - **Menu bar timer** — focus / short break / long break, live countdown in the menu bar.
 - **Watching eyes 👀** — during focus, a pair of eyes drops out of the menu bar at random intervals, tracks your cursor, and drops a rotating one-liner ("No goofing off~ 👀"). Click-through, so it never gets in your way.
-- **Full-screen breaks (Flow-style)** — when focus ends, a frosted break screen takes over so you actually rest. Close it anytime; when the break ends, a "resume focus" prompt pops up on its own.
-- **Native notifications** on session changes, with an optional completion sound.
+- **Full-screen breaks (Flow-style)** — when focus ends, a frosted break screen takes over so you actually rest. Close it anytime; when the break ends, a "resume focus" prompt pops up on its own. Prefer to stay in flow? Switch to a **sound-only break** in Settings.
+- **Native notifications** on session changes, with an optional completion sound and an adjustable volume (drag the slider to preview). Stale notifications clear themselves as sessions advance.
+- **Auto-pause on sleep / screen lock** — the timer pauses when your Mac sleeps or the screen locks, and resumes when you're back.
 - **Bilingual** — English / Korean, switchable in-app.
 - **Launch at login**, no Dock icon (menu bar only).
 

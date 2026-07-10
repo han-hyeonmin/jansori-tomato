@@ -4,6 +4,7 @@ import SwiftUI
 struct ControlPanelView: View {
     @ObservedObject var engine: TimerEngine
     let checkIn: CheckInController
+    let sound: SoundManager
     @ObservedObject private var loc = LocalizationManager.shared
     @ObservedObject private var updates = UpdateChecker.shared
     @State private var showSettings = false
@@ -16,7 +17,10 @@ struct ControlPanelView: View {
         // 팝오버 창을 고정 크기로 두고 내용은 안에서 스크롤한다.
         // (설정 펼치기·언어 전환 등 내용 높이가 바뀌어도 창이 움직이지 않도록)
         if let fixedHeight {
+            // 스크롤 인디케이터를 숨겨, "스크롤바 항상 표시" 설정에서도 스크롤바가
+            // 가로 폭을 잠식해 내용이 왼쪽으로 밀리는 현상을 막는다.
             ScrollView { content }
+                .scrollIndicators(.hidden)
                 .frame(width: 268, height: fixedHeight)
         } else {
             content
@@ -173,6 +177,28 @@ struct ControlPanelView: View {
 
             Toggle(loc("완료 사운드", "Completion sound"), isOn: $engine.settings.soundEnabled)
                 .font(.subheadline)
+
+            if engine.settings.soundEnabled {
+                HStack(spacing: 6) {
+                    Image(systemName: "speaker.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                    // 슬라이더를 놓는 순간(editing 종료) 현재 음량으로 완료음을 미리 들려준다.
+                    Slider(value: $engine.settings.soundVolume, in: 0...1) { editing in
+                        if !editing { sound.previewCompletionSound() }
+                    }
+                    Image(systemName: "speaker.wave.3.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+                .help(loc("완료 사운드 음량 (놓으면 미리듣기)", "Completion sound volume (release to preview)"))
+            }
+
+            Toggle(loc("휴식 전체화면 대신 알림음만", "Sound only (no full-screen break)"),
+                   isOn: $engine.settings.soundOnlyBreak)
+                .font(.subheadline)
+                .help(loc("휴식 시 화면을 덮지 않고 알림음만 재생합니다",
+                          "Play only a sound at break time instead of covering the screen"))
 
             Toggle(loc("로그인 시 자동 시작", "Launch at login"), isOn: Binding(
                 get: { LaunchAtLogin.isEnabled },

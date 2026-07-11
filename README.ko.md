@@ -8,7 +8,7 @@
   <img src="assets/peek-ko.gif" width="500" alt="메뉴바에서 튀어나와 커서를 따라가는 감시 캐릭터">
 </p>
 
-> 상태: 초기 릴리즈 (v0.1.4).
+> 상태: 초기 릴리즈 (v0.1.6).
 
 ## 기능
 
@@ -93,7 +93,7 @@ Scripts/
 - [x] 전체화면 휴식 오버레이 (자동 시작 + 재개 프롬프트)
 - [x] 네이티브 알림 + 완료 사운드, 로그인 시 자동 시작, 다국어, 앱 아이콘
 - [x] 시간 키패드 입력, 기본값 초기화, 인앱 업데이트 확인
-- [x] GitHub 릴리즈 + Homebrew tap (ad-hoc 서명 빌드, v0.1.3)
+- [x] GitHub 릴리즈 + Homebrew tap (ad-hoc 서명 빌드, v0.1.6)
 - [ ] `homebrew/cask` 본진 제출
 - [ ] 코드 서명 / 공증 (Developer ID)
 

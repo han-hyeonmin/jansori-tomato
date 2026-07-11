@@ -102,14 +102,10 @@ final class TimerEngine: ObservableObject {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    /// 메뉴바에 표시할 문자열. 정지 상태에서는 이모지만.
+    /// 메뉴바에 표시할 문자열. 정지 상태(초기화·시작 전)에서도 리셋된 시간을
+    /// 계속 보여준다(초기화 시 시계가 사라지지 않도록).
     var menuBarTitle: String {
-        switch runState {
-        case .idle:
-            return sessionType.emoji
-        case .running, .paused:
-            return "\(sessionType.emoji) \(formattedRemaining)"
-        }
+        "\(sessionType.emoji) \(formattedRemaining)"
     }
 
     // MARK: 조작

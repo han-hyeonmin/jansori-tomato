@@ -37,10 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 상태바 텍스트 폰트(시스템 메뉴바 폰트 크기에 tabular figures 적용).
     private var menuBarFont = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
-    /// 카운트다운 중 고정할 아이템 폭(가장 넓은 "🍅 00:00" 기준, 한 번만 계산).
+    /// 상태바 아이템 고정 폭(가장 넓은 "🍅 00:00" 기준, 한 번만 계산해 계속 고정).
     private var runningLength: CGFloat = NSStatusItem.variableLength
-    /// 팝오버가 열려 있는 동안 미뤄둔 길이 변경(닫힐 때 적용).
-    private var pendingLength: CGFloat?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -92,9 +90,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePopover(_:))
         }
 
-        // 가장 넓은 카운트다운 문자열의 폭을 재, 살짝 여유를 두고 고정폭으로 쓴다.
+        // 가장 넓은 문자열의 폭을 재, 살짝 여유를 두고 항상 고정폭으로 쓴다.
+        // idle 상태에서도 시계를 표시하므로 폭이 늘 일정하다 → 폭 변화로 인한
+        // 흔들림도, 팝오버가 열린 채 리사이즈되며 화살표가 튀는 문제도 없다.
         let widest = NSAttributedString(string: "🍅 00:00", attributes: [.font: menuBarFont])
         runningLength = ceil(widest.size().width) + 8
+        item.length = runningLength
     }
 
     private func updateStatusButton() {
@@ -103,23 +104,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             string: engine.menuBarTitle,
             attributes: [.font: menuBarFont, .foregroundColor: NSColor.labelColor]
         )
-        // 실행/일시정지 중에는 폭을 고정해 숫자 잉크 차이로 인한 흔들림을 없앤다.
-        // 정지 상태(이모지만)에서는 내용에 맞춰 좁게 둔다.
-        let desired: CGFloat = engine.runState == .idle ? NSStatusItem.variableLength : runningLength
-        applyLength(desired)
-    }
-
-    /// 상태바 아이템 길이를 적용한다. 단, 팝오버가 열려 있는 동안 앵커(버튼)를
-    /// 리사이즈하면 팝오버 화살표가 튀므로(예: 초기화 → idle 전환), 열려 있으면
-    /// 닫힐 때까지 미룬다. 제목(숫자) 갱신은 고정폭 안에서 이뤄져 리사이즈가 없다.
-    private func applyLength(_ desired: CGFloat) {
-        if popover.isShown {
-            pendingLength = desired
-            return
-        }
-        if statusItem?.length != desired {
-            statusItem?.length = desired
-        }
     }
 
     // MARK: 팝오버
@@ -127,7 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setUpPopover() {
         popover.behavior = .transient
         popover.animates = false
-        popover.delegate = self
         popover.contentViewController = NSHostingController(
             rootView: ControlPanelView(
                 engine: engine,
@@ -144,17 +127,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
-        }
-    }
-}
-
-extension AppDelegate: NSPopoverDelegate {
-    /// 팝오버가 닫힌 뒤, 열려 있는 동안 미뤄둔 상태바 길이 변경을 적용한다.
-    func popoverDidClose(_ notification: Notification) {
-        guard let pending = pendingLength else { return }
-        pendingLength = nil
-        if statusItem?.length != pending {
-            statusItem?.length = pending
         }
     }
 }

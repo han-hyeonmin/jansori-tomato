@@ -8,7 +8,7 @@ A macOS menu bar Pomodoro timer with an attitude. During a focus session, a pair
   <img src="assets/peek-en.gif" width="500" alt="Watching eyes peeking out of the menu bar and following the cursor">
 </p>
 
-> Status: early release (v0.1.6).
+> Status: early release (v0.1.7).
 
 ## Features
 
@@ -93,7 +93,7 @@ Dev tips: `CHECKIN_PREVIEW=1 swift run` shows the character immediately; `BREAK_
 - [x] Full-screen break overlay (auto-start + resume prompt)
 - [x] Native notifications + completion sound, launch at login, bilingual, app icon
 - [x] Keypad time entry, reset-to-defaults, in-app update check
-- [x] GitHub release + Homebrew tap with ad-hoc signed builds (v0.1.6)
+- [x] GitHub release + Homebrew tap with ad-hoc signed builds (v0.1.7)
 - [ ] Submit to `homebrew/cask`
 - [ ] Code signing / notarization (Developer ID)
 

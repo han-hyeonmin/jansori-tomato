@@ -3,8 +3,8 @@
 # Bump version/sha256 on each release (Scripts/package-release.sh prints the sha256).
 
 cask "jansori-tomato" do
-  version "0.1.4"
-  sha256 "1f854ea5caf92c9a714f13f03d64911e82928d8f4a226325d4ae5697ed94d4b0"
+  version "0.1.5"
+  sha256 "f7c166e3dd8f3bdcf9ba4e2ba3a2830f60f179228e45dd1293927623fbd9301e"
 
   url "https://github.com/han-hyeonmin/jansori-tomato/releases/download/v#{version}/JansoriTomato-#{version}.zip"
   name "Jansori Tomato"

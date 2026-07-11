@@ -30,10 +30,19 @@ struct PomodoroTimerApp: App {
             ControlPanelView(engine: engine, checkIn: checkIn, sound: sound)
         } label: {
             // 메뉴바 레이블은 텍스트만 안정적으로 렌더된다.
-            // monospacedDigit으로 숫자 폭을 고정해, 카운트다운 중 메뉴바 영역이
-            // 숫자에 따라 좌우로 흔들리지 않게 한다.
-            Text(engine.menuBarTitle)
+            // monospacedDigit만으로는 숫자 글리프 폭만 같아질 뿐, MenuBarExtra가
+            // tick마다 레이블 크기를 재측정하며 항목 폭이 미세하게 흔들린다.
+            // 그래서 tick마다 변하지 않는 템플릿(숫자를 전부 0으로 고정)을 숨겨서
+            // 깔아 레이아웃 폭을 확정하고, 실제 타이틀을 그 위에 겹쳐 그린다.
+            // 이러면 항목 폭이 매 tick 완전히 동일해 좌우 흔들림이 사라진다.
+            Text(engine.menuBarWidthTemplate)
                 .monospacedDigit()
+                .hidden()
+                .overlay(alignment: .leading) {
+                    Text(engine.menuBarTitle)
+                        .monospacedDigit()
+                        .fixedSize()
+                }
         }
         .menuBarExtraStyle(.window)
     }

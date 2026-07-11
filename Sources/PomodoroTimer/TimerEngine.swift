@@ -112,6 +112,15 @@ final class TimerEngine: ObservableObject {
         }
     }
 
+    /// 메뉴바 폭 예약용 템플릿. `menuBarTitle`과 글자 수·구조는 같되
+    /// 숫자를 전부 "0"으로 치환해, 카운트다운 중 tick마다 값이 바뀌어도
+    /// 이 문자열은 변하지 않는다. monospacedDigit이 적용되면 "0"과 실제 숫자의
+    /// 폭이 동일하므로, 이 템플릿으로 레이아웃 폭을 고정하면 메뉴바 항목이
+    /// 좌우로 흔들리지 않는다.
+    var menuBarWidthTemplate: String {
+        String(menuBarTitle.map { $0.isNumber ? "0" : $0 })
+    }
+
     // MARK: 조작
 
     func start() {

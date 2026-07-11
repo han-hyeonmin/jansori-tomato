@@ -10,7 +10,16 @@ struct PomodoroTimerApp: App {
         // 메뉴바 전용(LSUIElement) 앱이라 보이는 창 씬이 필요 없다.
         // 상태바 아이템·팝오버는 AppDelegate가 직접 관리한다(폭 고정을 위해
         // MenuBarExtra 대신 NSStatusItem을 쓴다 — 아래 주석 참고).
+        //
+        // App.body는 최소 하나의 Scene을 요구하므로 빈 Settings 씬을 자리채움으로
+        // 둔다. 실제 설정은 팝오버 패널의 DisclosureGroup에 통합돼 있어 이 씬은
+        // 열 일이 없다. 그런데 Settings 씬은 표준 "설정…"(⌘,) 메뉴 항목을 자동
+        // 등록해 이 빈 창을 띄워버리므로, appSettings 커맨드 그룹을 비워 그 경로를
+        // 제거한다. (reopen·상태복원 경로는 AppDelegate에서 함께 차단한다.)
         Settings { EmptyView() }
+            .commands {
+                CommandGroup(replacing: .appSettings) { }
+            }
     }
 }
 
@@ -42,6 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+
+        // 이전 세션에서 상태 복원으로 되살아난 빈 설정 창을 닫는다(아래 주석 참고).
+        closeStraySettingsWindows()
 
         // 엔진·컨트롤러 구성.
         let engine = TimerEngine()
@@ -127,6 +139,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+        }
+    }
+
+    // MARK: 빈 설정 창 차단
+
+    /// 메뉴바 앱이라 표준 창을 열지 않는다. 아이콘 재클릭·재실행(reopen) 시 SwiftUI가
+    /// 유일한 씬인 빈 Settings 창을 열어버리는 것을 막는다.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        false
+    }
+
+    /// 상태 복원이 이전 세션의 빈 설정 창을 되살릴 수 있어, 실행 직후 표준(제목 있는,
+    /// 복원 대상) 창을 닫는다. 상태바 창은 borderless·비복원이라, 브레이크 오버레이는
+    /// 실행 시점엔 아직 만들어지지 않아 여기 걸리지 않는다. 복원 타이밍을 놓치지 않도록
+    /// 다음 런루프에서 한 번 더 확인한다.
+    private func closeStraySettingsWindows() {
+        closeTitledRestorableWindows()
+        DispatchQueue.main.async { [weak self] in
+            self?.closeTitledRestorableWindows()
+        }
+    }
+
+    private func closeTitledRestorableWindows() {
+        for window in NSApp.windows
+        where window.isRestorable && window.styleMask.contains(.titled) {
+            window.close()
         }
     }
 }

@@ -8,7 +8,7 @@ Issues live in GitHub Issues (`han-hyeonmin/jansori-tomato`), managed via the `g
 
 ### Triage labels
 
-Default label vocabulary — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. `wontfix` reuses the repo's existing GitHub label; the other four are created on first use. See `docs/agents/triage-labels.md`.
+Default label vocabulary — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. `wontfix` reuses the repo's existing GitHub label; the other four are created on first use.
 
 ### Domain docs
 

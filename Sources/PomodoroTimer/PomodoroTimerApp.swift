@@ -51,10 +51,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// 상태바 텍스트 폰트(시스템 메뉴바 폰트 크기에 tabular figures 적용).
     private var menuBarFont = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+    /// 상태바 아이콘 클릭 감시자(앱 수명 동안 유지).
+    private var statusItemClickMonitor: Any?
     /// 팝오버 크기 변화 관찰자(열려 있는 동안만 유지).
     private var popoverResizeObserver: Any?
     /// 팝오버가 마지막으로 닫힌 시각(아이콘 클릭이 곧바로 다시 열지 않게 막는 데 쓴다).
     private var popoverClosedAt: Date?
+    /// 팝오버가 열려 있는지. 열려 있는 동안 상태바 아이콘을 눌린 상태로 표시한다.
+    private var isPanelOpen = false
     /// 상태바 아이템 고정 폭(가장 넓은 "🍅 00:00" 기준, 한 번만 계산해 계속 고정).
     private var runningLength: CGFloat = NSStatusItem.variableLength
 
@@ -109,7 +113,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             button.imagePosition = .noImage
             button.target = self
             button.action = #selector(togglePopover(_:))
+
         }
+
+        installStatusItemClickMonitor()
 
         // 가장 넓은 문자열의 폭을 재, 살짝 여유를 두고 항상 고정폭으로 쓴다.
         // idle 상태에서도 시계를 표시하므로 폭이 늘 일정하다 → 폭 변화로 인한
@@ -119,12 +126,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         item.length = runningLength
     }
 
+    /// 상태바 아이콘 클릭을 직접 받는다.
+    ///
+    /// 버튼의 target/action에 맡기면 `NSButton`의 추적 루프가 mouse-up에서 `highlight(_:)`로
+    /// 넣은 눌린 표시를 지워 버린다. 지워진 뒤에 되돌리는 방식은 아무리 빨라도 한 프레임
+    /// 깜빡이므로, mouse-down을 여기서 처리하고 이벤트를 소비해 추적 자체가 시작되지 않게
+    /// 한다 — 지워지는 일이 없으니 깜빡임도 없다. 상태바 창의 이벤트가 아니면 그대로 흘려
+    /// 보내므로, 감시자가 못 잡는 경우에도 기존 action 경로가 받아 준다.
+    private func installStatusItemClickMonitor() {
+        statusItemClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            // 창 비교는 Sendable한 창 번호로 한다(NSEvent·NSWindow를 isolation 경계로
+            // 넘기지 않도록).
+            let windowNumber = event.windowNumber
+            var consumed = false
+            MainActor.assumeIsolated {
+                guard let self, let button = self.statusItem?.button,
+                      button.window?.windowNumber == windowNumber
+                else { return }
+                self.togglePopover(button)
+                consumed = true
+            }
+            return consumed ? nil : event
+        }
+    }
+
     private func updateStatusButton() {
         guard let button = statusItem?.button else { return }
         button.attributedTitle = NSAttributedString(
             string: engine.menuBarTitle,
             attributes: [.font: menuBarFont, .foregroundColor: NSColor.labelColor]
         )
+        // 팝오버가 열려 있는 동안 아이콘을 눌린 상태로 둔다.
+        //
+        // 버튼 액션은 기본값인 mouse-up에 발동하게 남겨 둬야 한다. mouse-down으로 옮기면
+        // AppKit이 추적을 끝내며(mouse-up) 이 표시를 지운 *뒤*에 복원이 들어가 한 프레임
+        // 깜빡인다. 기본값이면 AppKit의 삭제와 이 복원이 같은 이벤트 처리 안에서 이어지고,
+        // 누르는 동안에는 AppKit 자체 추적 하이라이트가 보여 빈틈이 없다.
+        button.highlight(isPanelOpen)
     }
 
     // MARK: 팝오버
@@ -170,6 +208,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return
         }
 
+        // 눌린 표시를 먼저 넣는다 — 팝오버를 띄운 뒤에 하면 그만큼 늦게 들어온다.
+        isPanelOpen = true
+        updateStatusButton()
+
         popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
         raisePopoverToMenuBar()
@@ -180,6 +222,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     /// 다시 열면 접힌 상태로 시작한다.
     func popoverDidClose(_ notification: Notification) {
         popoverClosedAt = Date()
+        isPanelOpen = false
+        updateStatusButton()
         stopObservingPopoverResize()
         NotificationCenter.default.post(name: .controlPanelDidClose, object: nil)
     }

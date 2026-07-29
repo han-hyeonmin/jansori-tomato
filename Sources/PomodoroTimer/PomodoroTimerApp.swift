@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setUpPopover() {
         popover.behavior = .transient
         popover.animates = false
-        popover.contentViewController = NSHostingController(
+        let hosting = NSHostingController(
             rootView: ControlPanelView(
                 engine: engine,
                 checkIn: checkIn,
@@ -131,6 +131,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onRequestClose: { [weak self] in self?.popover.performClose(nil) }
             )
         )
+        // 패널이 "더 보기"로 펼쳐지고 접힐 때 팝오버 크기가 내용을 따라가게 한다.
+        // (이걸 켜지 않으면 첫 표시 때의 크기에 갇혀 펼친 내용이 잘린다.)
+        hosting.sizingOptions = .preferredContentSize
+        popover.contentViewController = hosting
     }
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {

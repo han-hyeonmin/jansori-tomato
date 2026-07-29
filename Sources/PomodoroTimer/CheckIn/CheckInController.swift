@@ -15,6 +15,13 @@ final class CheckInController: ObservableObject {
     private let displayDuration: Double = 5.5
     private var messageIndex = 0
 
+    /// 이 시각 이후로는 깜빡이지 않는다. 퇴장 직전에 깜빡이면 눈을 다시 뜨는 동작이
+    /// 메뉴바로 빨려 올라가는 슬라이드와 겹쳐 움직임이 어색해진다.
+    private var blinkDeadline: Date = .distantPast
+    /// 퇴장 전 깜빡임을 멈춰 둘 여유. 깜빡임(0.15s)과 다시 뜨는 애니메이션(0.1s)이
+    /// 슬라이드 시작 전에 끝나도록 넉넉히 잡았다.
+    private let blinkGuard: Double = 0.8
+
     private var panel: CheckInPanel?
     private var isVisible = false
 
@@ -78,6 +85,8 @@ final class CheckInController: ObservableObject {
     private func showCharacter(for duration: Double) {
         ensurePanel()
         positionPanel()
+        // 표시 시간이 갱신되면 깜빡임 마감 시각도 같이 미룬다.
+        blinkDeadline = Date().addingTimeInterval(duration - blinkGuard)
         // 등장할 때마다 다음 문구로 순환(현재 언어로).
         model.message = CheckInMessages.message(at: messageIndex, LocalizationManager.shared)
         messageIndex += 1
@@ -114,12 +123,22 @@ final class CheckInController: ObservableObject {
         blinkTask?.cancel(); blinkTask = nil
         visibilityTask?.cancel(); visibilityTask = nil
 
-        // 사라질 땐 반드시 눈을 뜬 채로, 메뉴바 뒤로 슬라이드해 들어간다.
+        // 사라질 땐 반드시 눈을 뜬 채로 메뉴바 뒤로 슬라이드해 들어간다.
+        // 예정된 퇴장은 blinkDeadline이 막아 주지만, 일시정지·건너뛰기처럼 예정보다
+        // 이르게 숨길 때는 깜빡임 도중일 수 있다. 그럴 땐 눈을 다 뜨고 나서 슬라이드를
+        // 시작한다 — 두 동작이 겹치면 움직임이 어색하다.
+        let reopenDelay: Double = model.isBlinking ? 0.22 : 0
         model.isBlinking = false
-        model.appeared = false
 
         let closingPanel = panel
         Task { [weak self] in
+            if reopenDelay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(reopenDelay * 1_000_000_000))
+            }
+            // 그새 다시 등장했다면 퇴장을 취소한다.
+            guard self?.isVisible == false else { return }
+            self?.model.appeared = false
+
             // 슬라이드가 끝난 뒤 창을 내린다(알파 페이드와 겹치지 않게).
             try? await Task.sleep(nanoseconds: 620_000_000)
             if self?.isVisible == false {
@@ -162,12 +181,13 @@ final class CheckInController: ObservableObject {
             // 등장 직후 짧게 한 번 깜빡(인사), 그다음엔 가끔.
             try? await Task.sleep(nanoseconds: 500_000_000)
             while !Task.isCancelled {
-                self?.model.isBlinking = true
+                // 퇴장이 가까우면 이번 깜빡임은 건너뛰고 눈을 뜬 채로 사라진다.
+                guard let self, Date() < self.blinkDeadline else { break }
+                self.model.isBlinking = true
                 try? await Task.sleep(nanoseconds: 150_000_000)
-                self?.model.isBlinking = false
+                self.model.isBlinking = false
                 let wait = Double.random(in: 3.0...6.0)
                 try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
-                if Task.isCancelled { break }
             }
         }
     }

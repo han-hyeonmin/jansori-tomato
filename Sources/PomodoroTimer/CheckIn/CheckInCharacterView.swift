@@ -20,6 +20,14 @@ struct CheckInCharacterView: View {
 
     private let panelWidth: CGFloat = 220
     private let panelHeight: CGFloat = 150
+    private let eyeHeight: CGFloat = 58
+    /// 등장 시 눈이 메뉴바 아래로 내려오는 양.
+    ///
+    /// 패널 top은 메뉴바 바로 아래(`visibleFrame.maxY`)에 붙어 있다. 여기서 조금만
+    /// 내리면 눈의 둥근 윗면이 바로 아래 창의 가로 top 경계선과 몇 pt 간격으로 나란히
+    /// 놓여, 두 선이 겹쳐 보이며 눈이 납작하게 일그러진 것처럼 보인다. 창 경계선이
+    /// 보통 메뉴바 바로 아래 10pt 안쪽에 오므로 그보다 넉넉히 내려 겹치지 않게 한다.
+    private let dropDistance: CGFloat = 18
 
     var body: some View {
         VStack(spacing: 5) {
@@ -28,8 +36,8 @@ struct CheckInCharacterView: View {
             Spacer(minLength: 0)
         }
         .frame(width: panelWidth, height: panelHeight, alignment: .top)
-        // 숨을 땐 패널 위(메뉴바 뒤)로 완전히 올라가고, 나올 땐 살짝 아래로.
-        .offset(y: model.appeared ? 6 : -(panelHeight + 12))
+        // 숨을 땐 패널 위(메뉴바 뒤)로 완전히 올라가고, 나올 땐 아래로 쑥.
+        .offset(y: model.appeared ? dropDistance : -(panelHeight + 12))
         .animation(.spring(response: 0.55, dampingFraction: 0.74), value: model.appeared)
     }
 
@@ -44,11 +52,12 @@ struct CheckInCharacterView: View {
 
     private var eye: some View {
         ZStack {
-            // 👀 처럼 세로로 더 긴 눈.
+            // 👀 처럼 세로로 더 긴 눈. 위쪽 topClip만큼은 잘려 나가므로 그만큼 더 크게
+            // 그려, 보이는 부분의 크기는 그대로 유지한다.
             Ellipse()
                 .fill(.white)
                 .overlay(Ellipse().stroke(Color(white: 0.80), lineWidth: 1.5))
-                .frame(width: 42, height: model.isBlinking ? 6 : 58)
+                .frame(width: 42, height: model.isBlinking ? 6 : eyeHeight)
                 .shadow(color: .black.opacity(0.20), radius: 5, x: 0, y: 2)
 
             if !model.isBlinking {
@@ -65,7 +74,7 @@ struct CheckInCharacterView: View {
             }
         }
         // 고정 높이 컨테이너: 깜빡여도 눈 영역 크기가 그대로라 말풍선이 안 움직인다.
-        .frame(width: 42, height: 58)
+        .frame(width: 42, height: eyeHeight)
         .animation(.easeOut(duration: 0.1), value: model.isBlinking)
         .animation(.easeOut(duration: 0.09), value: model.gaze.dx)
         .animation(.easeOut(duration: 0.09), value: model.gaze.dy)

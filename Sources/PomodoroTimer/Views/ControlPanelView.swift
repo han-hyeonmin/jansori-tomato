@@ -1,6 +1,13 @@
 import SwiftUI
+import AppKit
 
 /// 메뉴바 아이콘을 클릭하면 나타나는 컨트롤 패널.
+///
+/// 레이아웃은 macOS 메뉴바 유틸리티의 관용적인 구성을 따른다.
+/// 상단에 현재 상태를 요약한 카드, 그 아래 얇은 상태 한 줄, 구분선으로 나눈
+/// "라벨 왼쪽 · 컨트롤 오른쪽" 행 그룹, 마지막에 평문 메뉴 항목, 맨 아래 중앙에
+/// 접기/펼치기 토글. 접힌 상태에서는 타이머 조작까지만 보이고, 설정과 메뉴
+/// 항목은 "더 보기"로 펼친다.
 struct ControlPanelView: View {
     @ObservedObject var engine: TimerEngine
     let checkIn: CheckInController
@@ -9,7 +16,11 @@ struct ControlPanelView: View {
     var onRequestClose: (() -> Void)? = nil
     @ObservedObject private var loc = LocalizationManager.shared
     @ObservedObject private var updates = UpdateChecker.shared
-    @State private var showSettings = false
+    /// 설정·메뉴 항목까지 펼친 상태인지("더 보기" / "간략히 보기").
+    @State private var expanded = false
+    /// 펼친 내용의 실측 높이. 펼치는 첫 프레임에서 크기가 튀지 않도록 대략치로 시작해
+    /// 실제 측정값으로 교정된다(언어·설정에 따라 내용 높이가 조금씩 달라진다).
+    @State private var expandedContentHeight: CGFloat = 640
     @State private var updateCopied = false
     /// 범위를 벗어난 값을 입력한 필드에 잠깐 띄우는 경고 말풍선 정보.
     @State private var inputWarning: InputWarning?
@@ -21,223 +32,206 @@ struct ControlPanelView: View {
         let id = UUID()
     }
 
-    /// 팝오버 고정 높이(접힌 내용에 딱 맞춤 — 측정값 418 + 여유). nil이면 내용 크기에 맞춘다.
-    var fixedHeight: CGFloat? = 419
+    // MARK: 치수
+
+    /// 패널 폭.
+    private let panelWidth: CGFloat = 280
+    /// 카드·구분선 안쪽에서 행이 추가로 들여쓰는 양(카드는 구분선보다 조금 넓다).
+    private let rowInset: CGFloat = 7
+
+    private var rowFont: Font { .system(size: 12.5) }
+    private var captionFont: Font { .system(size: 11) }
+    private var accent: Color { engine.sessionType.accentColor }
+
+    /// 펼친 상태의 팝오버 높이. 내용 높이를 그대로 쓰되, 화면을 넘지 않게 자른다
+    /// (잘리면 안에서 스크롤된다).
+    private var expandedHeight: CGFloat {
+        let available = (NSScreen.main?.visibleFrame.height ?? 900) - 40
+        return min(expandedContentHeight, max(360, available))
+    }
 
     var body: some View {
-        // 팝오버 창을 고정 크기로 두고 내용은 안에서 스크롤한다.
-        // (설정 펼치기·언어 전환 등 내용 높이가 바뀌어도 창이 움직이지 않도록)
-        if let fixedHeight {
-            // 스크롤 인디케이터를 숨겨, "스크롤바 항상 표시" 설정에서도 스크롤바가
-            // 가로 폭을 잠식해 내용이 왼쪽으로 밀리는 현상을 막는다.
-            ScrollView { content }
+        // 접힌 상태는 내용 높이 그대로(팝오버가 딱 맞게 줄어든다).
+        // 펼친 상태는 실측 높이 + 스크롤 — 스크롤 인디케이터를 숨겨 "스크롤바 항상
+        // 표시" 설정에서도 가로 폭을 잠식하지 않게 한다.
+        if expanded {
+            ScrollView { content.measuringHeight() }
                 .scrollIndicators(.hidden)
-                .frame(width: 268, height: fixedHeight)
+                .frame(width: panelWidth, height: expandedHeight)
+                .onPreferenceChange(ContentHeightKey.self) { height in
+                    if height > 0 { expandedContentHeight = height }
+                }
         } else {
             content
         }
     }
 
     private var content: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
             if let version = updates.availableUpdate {
                 updateBanner(version)
             }
-            sessionHeader
-            timerRing
-            controlButtons
-            sessionDots
 
-            Divider()
+            heroCard
+            statusLine.padding(.horizontal, rowInset)
 
-            DisclosureGroup(loc("설정", "Settings"), isExpanded: $showSettings) {
-                settingsSection
-                    .padding(.top, 8)
+            separator
+            controlRow.padding(.horizontal, rowInset)
+
+            if expanded {
+                separator
+                durationSection.padding(.horizontal, rowInset)
+
+                separator
+                behaviorSection.padding(.horizontal, rowInset)
+
+                separator
+                actionSection
+
+                separator
+                MenuRow(title: loc("Jansori Tomato 종료", "Quit Jansori Tomato"),
+                        help: loc("앱을 종료합니다", "Quit the app")) {
+                    NSApplication.shared.terminate(nil)
+                }
             }
-            .font(.subheadline)
 
-            if showSettings {
-                Divider()
-                resetButtons
-            }
-
-            Divider()
-
-            footer
+            separator
+            expandToggle
         }
-        .padding(20)
-        .frame(width: 268)
+        .padding(.horizontal, rowInset)
+        .padding(.top, 9)
+        .padding(.bottom, 6)
+        .frame(width: panelWidth)
     }
 
-    // MARK: 헤더
-
-    private var sessionHeader: some View {
-        HStack(spacing: 6) {
-            Text(engine.sessionType.emoji)
-            Text(engine.sessionType.title(loc))
-                .font(.headline)
-                .foregroundStyle(engine.sessionType.accentColor)
-        }
+    /// 구분선. 카드보다 한 단계 안쪽에서 시작한다.
+    private var separator: some View {
+        Divider().padding(.horizontal, rowInset)
     }
 
-    // MARK: 진행 링 + 남은 시간
+    // MARK: 상태 요약 카드
 
-    private var timerRing: some View {
+    private var heroCard: some View {
+        HStack(spacing: 12) {
+            heroIcon
+            VStack(alignment: .leading, spacing: 1) {
+                Text(engine.formattedRemaining)
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                Text("\(engine.sessionType.title(loc)) · \(runStateText)")
+                    .font(captionFont)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
+    }
+
+    /// 카드 왼쪽의 작은 진행 링(안에 세션 이모지).
+    private var heroIcon: some View {
         ZStack {
             Circle()
-                .stroke(engine.sessionType.accentColor.opacity(0.15), lineWidth: 10)
+                .stroke(accent.opacity(0.18), lineWidth: 3.5)
 
             Circle()
                 .trim(from: 0, to: engine.progress)
-                .stroke(
-                    engine.sessionType.accentColor,
-                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                )
+                .stroke(accent, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.25), value: engine.progress)
 
-            Text(engine.formattedRemaining)
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
-                .monospacedDigit()
+            Text(engine.sessionType.emoji)
+                .font(.system(size: 15))
         }
-        .frame(width: 150, height: 150)
-        .padding(.vertical, 4)
+        .frame(width: 38, height: 38)
     }
 
-    // MARK: 조작 버튼
+    private var runStateText: String {
+        switch engine.runState {
+        case .idle: return loc("시작 대기", "Ready")
+        case .running: return loc("진행 중", "Running")
+        case .paused: return loc("일시정지", "Paused")
+        }
+    }
 
-    private var controlButtons: some View {
-        HStack(spacing: 12) {
-            Button(action: engine.reset) {
-                Image(systemName: "arrow.counterclockwise")
-                    .frame(width: 20, height: 20)
+    // MARK: 상태 한 줄(오늘 집중 + 사이클 점)
+
+    private var statusLine: some View {
+        let interval = max(1, engine.settings.longBreakInterval)
+        let filled = engine.completedFocusSessions % interval
+        return HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+            Text(loc("오늘 집중 \(engine.todayFocusCount)회", "\(engine.todayFocusCount) focused today"))
+                .font(captionFont)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 6)
+            HStack(spacing: 5) {
+                ForEach(0..<interval, id: \.self) { index in
+                    Circle()
+                        .fill(index < filled ? SessionType.focus.accentColor : Color.secondary.opacity(0.25))
+                        .frame(width: 6, height: 6)
+                }
             }
-            .help(loc("현재 세션 리셋", "Reset session"))
+            .help(loc("긴 휴식까지 \(interval - filled)회 남음",
+                      "\(interval - filled) to long break"))
+        }
+    }
 
+    // MARK: 타이머 조작
+
+    private var controlRow: some View {
+        HStack(spacing: 6) {
             Button {
                 let wasRunning = engine.isRunning
                 engine.toggle()
                 // 방금 "시작"을 눌렀다면(일시정지가 아니라) 팝오버를 닫아 집중에 들어가게 한다.
                 if !wasRunning { dismissPopover() }
             } label: {
-                Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
-                    .frame(width: 28, height: 28)
-                    .font(.title2)
+                HStack(spacing: 5) {
+                    Image(systemName: engine.isRunning ? "pause.fill" : "play.fill")
+                        .font(.system(size: 10))
+                    Text(engine.isRunning ? loc("일시정지", "Pause") : loc("시작", "Start"))
+                        .font(.system(size: 12.5, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 15)
             }
             .buttonStyle(.borderedProminent)
-            .tint(engine.sessionType.accentColor)
+            .tint(accent)
             .help(engine.isRunning ? loc("일시정지", "Pause") : loc("시작", "Start"))
 
-            Button(action: engine.skip) {
-                Image(systemName: "forward.fill")
-                    .frame(width: 20, height: 20)
-            }
-            .help(loc("건너뛰기", "Skip"))
+            iconButton("arrow.counterclockwise", help: loc("현재 세션 리셋", "Reset session"),
+                       action: engine.reset)
+            iconButton("forward.fill", help: loc("건너뛰기", "Skip"),
+                       action: engine.skip)
         }
     }
 
-    // MARK: 집중 세션 진행 표시(토마토 점)
-
-    private var sessionDots: some View {
-        let interval = max(1, engine.settings.longBreakInterval)
-        let filled = engine.completedFocusSessions % interval
-        return HStack(spacing: 6) {
-            ForEach(0..<interval, id: \.self) { index in
-                Circle()
-                    .fill(index < filled ? SessionType.focus.accentColor : Color.secondary.opacity(0.25))
-                    .frame(width: 8, height: 8)
-            }
+    private func iconButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 10))
+                .frame(width: 16, height: 15)
         }
-        .help(loc("긴 휴식까지 \(interval - filled)회 남음",
-                  "\(interval - filled) to long break"))
+        .buttonStyle(.bordered)
+        .help(help)
     }
 
-    // MARK: 설정
+    // MARK: 세션 길이
 
-    private var settingsSection: some View {
-        VStack(spacing: 10) {
+    private var durationSection: some View {
+        VStack(spacing: 7) {
             durationStepper(loc("집중", "Focus"), value: $engine.settings.focusMinutes, range: 1...59)
             durationStepper(loc("짧은 휴식", "Short break"), value: $engine.settings.shortBreakMinutes, range: 1...59)
             durationStepper(loc("긴 휴식", "Long break"), value: $engine.settings.longBreakMinutes, range: 1...59)
             durationStepper(loc("긴 휴식 주기", "Long break every"), value: $engine.settings.longBreakInterval,
                             range: 2...8, unit: loc("회", "×"))
-
-            Divider()
-
-            Picker(selection: $engine.settings.checkInIntervalMinutes) {
-                Text(loc("끄기", "Off")).tag(0)
-                Text(loc("3분", "3m")).tag(3)
-                Text(loc("5분", "5m")).tag(5)
-                Text(loc("10분", "10m")).tag(10)
-            } label: {
-                Text(loc("감시 캐릭터", "Watching eyes"))
-            }
-            .pickerStyle(.menu)
-            .font(.subheadline)
-
-            Button {
-                checkIn.previewNow()
-                dismissPopover()
-            } label: {
-                Label(loc("캐릭터 미리보기", "Preview character"), systemImage: "eye")
-                    .frame(maxWidth: .infinity)
-            }
-            .font(.subheadline)
-
-            Divider()
-
-            Toggle(loc("완료 사운드", "Completion sound"), isOn: $engine.settings.soundEnabled)
-                .font(.subheadline)
-
-            if engine.settings.soundEnabled {
-                HStack(spacing: 6) {
-                    Image(systemName: "speaker.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                    // 슬라이더를 놓는 순간(editing 종료) 현재 음량으로 완료음을 미리 들려준다.
-                    Slider(value: $engine.settings.soundVolume, in: 0...1) { editing in
-                        if !editing { sound.previewCompletionSound() }
-                    }
-                    Image(systemName: "speaker.wave.3.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                }
-                .help(loc("완료 사운드 음량 (놓으면 미리듣기)", "Completion sound volume (release to preview)"))
-            }
-
-            Toggle(loc("휴식 전체화면 대신 알림음만", "Sound only (no full-screen break)"),
-                   isOn: $engine.settings.soundOnlyBreak)
-                .font(.subheadline)
-                .help(loc("휴식 시 화면을 덮지 않고 알림음만 재생합니다",
-                          "Play only a sound at break time instead of covering the screen"))
-
-            Toggle(loc("로그인 시 자동 시작", "Launch at login"), isOn: Binding(
-                get: { LaunchAtLogin.isEnabled },
-                set: { LaunchAtLogin.isEnabled = $0 }
-            ))
-            .font(.subheadline)
-
-            Picker(selection: $loc.language) {
-                ForEach(LocalizationManager.Language.allCases) { lang in
-                    Text(lang.label).tag(lang)
-                }
-            } label: {
-                Text(loc("언어", "Language"))
-            }
-            .pickerStyle(.menu)
-            .font(.subheadline)
-
-            Button {
-                engine.resetSettings()
-            } label: {
-                Label(loc("기본값으로 초기화", "Reset to defaults"), systemImage: "arrow.counterclockwise")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .font(.subheadline)
-            .help(loc("시간·주기·감시·사운드 설정을 기본값으로 되돌립니다",
-                      "Reset durations, interval, watching eyes, and sound to defaults"))
         }
         // 경고 말풍선은 잠깐 보였다가 사라진다(새 경고가 뜨면 타이머 재시작).
         .task(id: inputWarning?.id) {
@@ -247,25 +241,157 @@ struct ControlPanelView: View {
         }
     }
 
-    /// 초기화 버튼들(설정 펼침 시 설정 아래에 표시).
-    private var resetButtons: some View {
-        HStack(spacing: 8) {
-            Button(loc("사이클 초기화", "Reset cycle")) {
+    // MARK: 동작 설정
+
+    // 팝업 메뉴에는 폭을 지정하지 않는다. 고정 폭을 주면 팝업 버튼이 그 안에서
+    // 가운데 정렬돼, 항목 글자 폭에 따라(예: "10분" vs "English") 오른쪽 끝이
+    // 제각각 안쪽으로 밀린다. fixedSize로 고유 폭을 쓰면 토글·스텝퍼와 오른쪽 끝이 맞는다.
+    private var behaviorSection: some View {
+        VStack(spacing: 7) {
+            settingRow(loc("감시 캐릭터", "Watching eyes")) {
+                Picker("", selection: $engine.settings.checkInIntervalMinutes) {
+                    Text(loc("끄기", "Off")).tag(0)
+                    Text(loc("3분", "3m")).tag(3)
+                    Text(loc("5분", "5m")).tag(5)
+                    Text(loc("10분", "10m")).tag(10)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .controlSize(.small)
+                .font(rowFont)
+                .fixedSize()
+            }
+
+            settingRow(loc("완료 사운드", "Completion sound")) {
+                switchToggle($engine.settings.soundEnabled)
+            }
+
+            if engine.settings.soundEnabled {
+                volumeRow
+            }
+
+            settingRow(loc("휴식은 알림음만", "Sound-only break"),
+                       help: loc("휴식 시 화면을 덮지 않고 알림음만 재생합니다",
+                                 "Play only a sound at break time instead of covering the screen")) {
+                switchToggle($engine.settings.soundOnlyBreak)
+            }
+
+            settingRow(loc("로그인 시 자동 시작", "Launch at login")) {
+                switchToggle(Binding(
+                    get: { LaunchAtLogin.isEnabled },
+                    set: { LaunchAtLogin.isEnabled = $0 }
+                ))
+            }
+
+            settingRow(loc("언어", "Language")) {
+                Picker("", selection: $loc.language) {
+                    ForEach(LocalizationManager.Language.allCases) { lang in
+                        Text(lang.label).tag(lang)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .controlSize(.small)
+                .font(rowFont)
+                .fixedSize()
+            }
+        }
+    }
+
+    /// 완료 사운드 음량. 슬라이더를 놓는 순간(editing 종료) 현재 음량으로 미리 들려준다.
+    private var volumeRow: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "speaker.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .frame(width: 12)
+            Slider(value: $engine.settings.soundVolume, in: 0...1) { editing in
+                if !editing { sound.previewCompletionSound() }
+            }
+            .controlSize(.small)
+            Text("\(Int((engine.settings.soundVolume * 100).rounded()))%")
+                .font(captionFont)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 30, alignment: .trailing)
+        }
+        .help(loc("완료 사운드 음량 (놓으면 미리듣기)", "Completion sound volume (release to preview)"))
+    }
+
+    // MARK: 메뉴 항목
+
+    private var actionSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            MenuRow(title: loc("캐릭터 미리보기…", "Preview character…"),
+                    help: loc("감시 캐릭터가 지금 나타납니다", "Show the watching character right now")) {
+                checkIn.previewNow()
+                dismissPopover()
+            }
+            MenuRow(title: loc("사이클 초기화", "Reset cycle"),
+                    help: loc("긴 휴식까지의 집중 사이클 진행을 0으로 되돌립니다",
+                              "Reset the cycle progress toward the long break to zero")) {
                 engine.resetCycle()
             }
-            .frame(maxWidth: .infinity)
-            .help(loc("4개 집중 사이클 진행을 0으로 되돌립니다",
-                      "Reset the 4-session cycle progress to zero"))
-
-            Button(loc("통계 초기화", "Reset stats")) {
+            MenuRow(title: loc("통계 초기화", "Reset stats"),
+                    help: loc("오늘 완료한 집중 수를 0으로 되돌립니다",
+                              "Reset today's completed focus count to zero")) {
                 engine.resetStats()
             }
-            .frame(maxWidth: .infinity)
-            .help(loc("오늘 완료한 집중 수를 0으로 되돌립니다",
-                      "Reset today's completed focus count to zero"))
+            MenuRow(title: loc("설정 기본값으로 초기화", "Reset settings to defaults"),
+                    help: loc("시간·주기·감시·사운드 설정을 기본값으로 되돌립니다",
+                              "Reset durations, interval, watching eyes, and sound to defaults")) {
+                engine.resetSettings()
+            }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+    }
+
+    // MARK: 접기 / 펼치기
+
+    private var expandToggle: some View {
+        Button {
+            expanded.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                Text(expanded ? loc("간략히 보기", "Show less") : loc("더 보기", "Show more"))
+                    .font(captionFont)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+    }
+
+    // MARK: 행 구성 도우미
+
+    /// 라벨(+선택적 ⓘ 도움말)을 왼쪽에, 컨트롤을 오른쪽에 두는 설정 행.
+    private func settingRow<Control: View>(
+        _ label: String,
+        help: String? = nil,
+        @ViewBuilder control: () -> Control
+    ) -> some View {
+        HStack(spacing: 5) {
+            Text(label).font(rowFont)
+            if let help {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .help(help)
+            }
+            Spacer(minLength: 8)
+            control()
+        }
+    }
+
+    private func switchToggle(_ isOn: Binding<Bool>) -> some View {
+        Toggle("", isOn: isOn)
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .tint(accent)
     }
 
     /// 라벨 + 직접 입력 가능한 숫자 필드 + 스텝퍼. 값은 범위로 clamp되고,
@@ -278,26 +404,32 @@ struct ControlPanelView: View {
     ) -> some View {
         let unitText = unit ?? loc("분", "m")
         let bound = validated(value, range, unit: unitText, field: label)
-        return HStack(spacing: 6) {
-            Text(label)
-            Spacer()
-            TextField("", value: bound, format: .number)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 42)
-                .multilineTextAlignment(.trailing)
-                .monospacedDigit()
-            Text(unitText)
-                .foregroundStyle(.secondary)
-            Stepper("", value: bound, in: range)
-                .labelsHidden()
+        return settingRow(label) {
+            HStack(spacing: 5) {
+                TextField("", value: bound, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.small)
+                    .frame(width: 40)
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .font(rowFont)
+                // 단위는 고정폭 열로 둔다. 폭을 주지 않으면 글자 폭 차이(영어 "m" vs
+                // "×")만큼 오른쪽 정렬된 묶음이 밀려, 행마다 입력칸 위치가 어긋난다.
+                Text(unitText)
+                    .font(captionFont)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14, alignment: .leading)
+                Stepper("", value: bound, in: range)
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
         }
-        .font(.subheadline)
         // 경고 말풍선은 이 행 "안"(필드 왼쪽 빈 공간)에 띄운다. 행 높이를 벗어나지
         // 않게 두어야 아래 행이 위에 그려지며 말풍선을 덮거나, 스크롤뷰에 잘리는 일이 없다.
         .overlay(alignment: .trailing) {
             if let warning = inputWarning, warning.field == label {
                 WarningBubble(text: warning.text)
-                    .padding(.trailing, 96)   // 필드 묶음(입력칸+단위+스텝퍼) 왼쪽에 자리잡기
+                    .padding(.trailing, 92)   // 필드 묶음(입력칸+단위+스텝퍼) 왼쪽에 자리잡기
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
@@ -361,21 +493,6 @@ struct ControlPanelView: View {
         .help(loc("클릭하면 brew upgrade 명령을 복사합니다", "Click to copy the brew upgrade command"))
     }
 
-    // MARK: 푸터
-
-    private var footer: some View {
-        HStack {
-            Text(loc("오늘 집중: \(engine.todayFocusCount)", "Today: \(engine.todayFocusCount)"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button(loc("종료", "Quit")) {
-                NSApplication.shared.terminate(nil)
-            }
-            .font(.caption)
-        }
-    }
-
     /// 메뉴바 팝오버를 닫는다. 버튼 이벤트가 끝난 뒤(next runloop) 닫아야 안정적이다.
     private func dismissPopover() {
         DispatchQueue.main.async {
@@ -395,6 +512,53 @@ struct ControlPanelView: View {
                 }
             }
         }
+    }
+}
+
+/// 펼친 내용의 높이를 상위로 올려보내는 preference 키.
+private struct ContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private extension View {
+    /// 자기 높이를 `ContentHeightKey`로 보고한다.
+    func measuringHeight() -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: ContentHeightKey.self, value: proxy.size.height)
+            }
+        )
+    }
+}
+
+/// 메뉴처럼 보이는 평문 항목 행. 호버하면 배경이 옅게 깔린다.
+private struct MenuRow: View {
+    let title: String
+    let help: String
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                Text(title)
+                    .font(.system(size: 12.5))
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(hovering ? Color.primary.opacity(0.08) : Color.clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
     }
 }
 

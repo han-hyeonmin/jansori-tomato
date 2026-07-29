@@ -4,18 +4,33 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # 태그 없이 손으로 돌려 툴체인·SDK와 빌드만 확인할 수 있게 한다(업로드는 건너뜀).
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build:
-    runs-on: macos-14
+    # 최신 러너 이미지를 쓴다. AppKit은 링크된 SDK로 동작이 갈려서(팝오버 재질 등),
+    # 낮은 SDK로 빌드하면 개발 중에 보던 모습과 다른 앱이 배포된다.
+    # macos-14(SDK 14.5)로 빌드한 v0.1.11이 그래서 패널 배경이 칙칙하게 나왔다.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
+      # 러너에 여러 Xcode가 깔려 있으면 가장 높은 버전을 고른다(이미지 기본값이
+      # 최신이 아닐 수 있다).
+      - name: Select newest Xcode
+        run: |
+          newest="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "선택: $newest"
+          sudo xcode-select -s "$newest"
+
       - name: Show toolchain
-        run: swift --version
+        run: |
+          swift --version
+          echo "macOS SDK: $(xcrun --show-sdk-version)"
 
       - name: Generate app icon
         run: bash Scripts/make-icon.sh
@@ -23,12 +38,19 @@ jobs:
       - name: Build .app bundle
         run: bash Scripts/bundle-app.sh release
 
+      # 배포 후 "왜 로컬과 다르지"를 다시 추적하지 않도록 링크된 SDK를 로그에 남긴다.
+      - name: Show linked SDK
+        run: |
+          otool -l "build/Jansori Tomato.app/Contents/MacOS/PomodoroTimer" \
+            | grep -A4 LC_BUILD_VERSION | grep -E "minos|sdk" | head -2
+
       - name: Package zip
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           ditto -c -k --keepParent "build/Jansori Tomato.app" "build/JansoriTomato-${VERSION}.zip"
 
       - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: build/JansoriTomato-*.zip

@@ -18,6 +18,10 @@ struct ControlPanelView: View {
     @ObservedObject private var updates = UpdateChecker.shared
     /// 설정·메뉴 항목까지 펼친 상태인지("더 보기" / "간략히 보기").
     @State private var expanded = false
+    /// 포인터가 패널 위에 있는지(자동 접힘을 멈춰 두는 데 쓴다).
+    @State private var pointerInside = false
+    /// 포인터가 패널을 벗어난 뒤 자동으로 접히기까지의 시간(초).
+    private let autoCollapseDelay: Double = 8
     /// 펼친 내용의 실측 높이. 펼치는 첫 프레임에서 크기가 튀지 않도록 대략치로 시작해
     /// 실제 측정값으로 교정된다(언어·설정에 따라 내용 높이가 조금씩 달라진다).
     @State private var expandedContentHeight: CGFloat = 640
@@ -51,6 +55,29 @@ struct ControlPanelView: View {
     }
 
     var body: some View {
+        panel
+            .onHover { pointerInside = $0 }
+            // 펼쳐 둔 채 포인터가 패널을 벗어나면 잠시 뒤 스스로 접는다. 포인터가 위에
+            // 있는 동안에는 세지 않으니 설정을 만지는 중에 접히는 일은 없다. 팝오버를
+            // 닫아 둔 동안에도 hover가 아니므로, 다시 열면 접힌 상태로 시작한다.
+            .task(id: shouldAutoCollapse) {
+                guard shouldAutoCollapse else { return }
+                try? await Task.sleep(nanoseconds: UInt64(autoCollapseDelay * 1_000_000_000))
+                if !Task.isCancelled { expanded = false }
+            }
+            // 팝오버가 닫힐 때는 hover 종료 이벤트가 오지 않아 위 카운트다운이 시작되지
+            // 않는다. 닫힘 알림을 받아 바로 접는다.
+            .onReceive(NotificationCenter.default.publisher(for: .controlPanelDidClose)) { _ in
+                pointerInside = false
+                expanded = false
+            }
+    }
+
+    /// 포인터가 패널을 벗어난 펼침 상태 — 이때만 자동 접힘을 센다.
+    private var shouldAutoCollapse: Bool { expanded && !pointerInside }
+
+    @ViewBuilder
+    private var panel: some View {
         // 접힌 상태는 내용 높이 그대로(팝오버가 딱 맞게 줄어든다).
         // 펼친 상태는 실측 높이 + 스크롤 — 스크롤 인디케이터를 숨겨 "스크롤바 항상
         // 표시" 설정에서도 가로 폭을 잠식하지 않게 한다.
@@ -100,7 +127,9 @@ struct ControlPanelView: View {
         }
         .padding(.horizontal, rowInset)
         .padding(.top, 9)
-        .padding(.bottom, 6)
+        // 맨 아래 접기/펼치기 행이 밴드 안에서 아래로 치우쳐 보이지 않게 잡은 값.
+        // 행 위쪽 여백은 VStack 간격 10 + 토글 자체 여백 3 = 13pt이므로 아래도 맞춘다.
+        .padding(.bottom, 10)
         .frame(width: panelWidth)
     }
 
@@ -413,12 +442,14 @@ struct ControlPanelView: View {
                     .multilineTextAlignment(.trailing)
                     .monospacedDigit()
                     .font(rowFont)
-                // 단위는 고정폭 열로 둔다. 폭을 주지 않으면 글자 폭 차이(영어 "m" vs
-                // "×")만큼 오른쪽 정렬된 묶음이 밀려, 행마다 입력칸 위치가 어긋난다.
+                // 단위는 고정폭 열에 가운데 정렬로 둔다. 폭을 주지 않으면 글자 폭
+                // 차이(영어 "m" vs "×")만큼 오른쪽 정렬된 묶음이 밀려 행마다 입력칸
+                // 위치가 어긋난다. 한 글자짜리 열이라 왼쪽 정렬하면 글자마다 다른
+                // 사이드베어링이 한쪽에 몰려 보이므로 가운데로 맞춘다.
                 Text(unitText)
                     .font(captionFont)
                     .foregroundStyle(.secondary)
-                    .frame(width: 14, alignment: .leading)
+                    .frame(width: 14)
                 Stepper("", value: bound, in: range)
                     .labelsHidden()
                     .controlSize(.small)

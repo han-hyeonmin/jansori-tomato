@@ -23,6 +23,11 @@ struct PomodoroTimerApp: App {
     }
 }
 
+extension Notification.Name {
+    /// 컨트롤 패널이 닫혔음을 패널 뷰에 알린다(펼친 상태를 접기 위해).
+    static let controlPanelDidClose = Notification.Name("JansoriTomato.controlPanelDidClose")
+}
+
 /// 상태바 아이템과 컨트롤 패널 팝오버를 직접 관리하는 델리게이트.
 ///
 /// SwiftUI `MenuBarExtra`는 status item의 폭을 내용의 잉크 경계에 맞춰 잡아,
@@ -31,7 +36,7 @@ struct PomodoroTimerApp: App {
 /// 그 제어를 열어주지 않는다. 그래서 상태바 아이템을 손수 만들어,
 /// 카운트다운 중에는 길이를 고정폭으로 못박는다.
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     // 엔진과 부수 컨트롤러들(살아있는 동안 엔진을 관찰한다).
     private var engine: TimerEngine!
     private var checkIn: CheckInController!
@@ -46,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 상태바 텍스트 폰트(시스템 메뉴바 폰트 크기에 tabular figures 적용).
     private var menuBarFont = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+    /// 팝오버 크기 변화 관찰자(열려 있는 동안만 유지).
+    private var popoverResizeObserver: Any?
     /// 상태바 아이템 고정 폭(가장 넓은 "🍅 00:00" 기준, 한 번만 계산해 계속 고정).
     private var runningLength: CGFloat = NSStatusItem.variableLength
 
@@ -123,6 +130,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setUpPopover() {
         popover.behavior = .transient
         popover.animates = false
+        popover.delegate = self
+        // 화살표(꼬리)를 감춘다. 공개 API로는 크기를 조절할 수 없어, 비공개 KVC 키를
+        // 쓴다 — 존재를 먼저 확인하므로 애플이 없애면 화살표만 되돌아오고 앱은 멀쩡하다.
+        let hideAnchor = NSSelectorFromString("setShouldHideAnchor:")
+        if popover.responds(to: hideAnchor) {
+            popover.setValue(true, forKey: "shouldHideAnchor")
+        }
         let hosting = NSHostingController(
             rootView: ControlPanelView(
                 engine: engine,
@@ -139,11 +153,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func togglePopover(_ sender: NSStatusBarButton) {
         if popover.isShown {
+            stopObservingPopoverResize()
             popover.performClose(sender)
         } else {
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+            raisePopoverToMenuBar()
+            observePopoverResize()
         }
+    }
+
+    /// 팝오버가 닫히면(바깥 클릭 포함) 정리하고, 펼쳐져 있던 패널을 접게 알린다 —
+    /// 다시 열면 접힌 상태로 시작한다.
+    func popoverDidClose(_ notification: Notification) {
+        stopObservingPopoverResize()
+        NotificationCenter.default.post(name: .controlPanelDidClose, object: nil)
+    }
+
+    /// 팝오버 창을 메뉴바에 붙게 끌어올린다.
+    ///
+    /// 화살표를 감춰도 팝오버는 화살표가 있던 만큼(약 7pt) 메뉴바에서 떨어져 자리를 잡고,
+    /// `show(relativeTo:)`의 기준 사각형을 위로 밀어도 메뉴바를 넘지 않게 스스로 보정해
+    /// 버린다. 그래서 창을 직접 옮긴다.
+    ///
+    /// 고정값을 더하지 않고 내용 뷰의 실제 상단을 읽어 메뉴바 경계에 맞춘다 — 창 프레임과
+    /// 보이는 패널 사이의 그림자 여백을 몰라도 되고, 여러 번 불려도 같은 자리에 머문다.
+    private func raisePopoverToMenuBar() {
+        guard let view = popover.contentViewController?.view,
+              let window = view.window,
+              let screen = window.screen ?? NSScreen.main
+        else { return }
+
+        let contentTop = window.convertToScreen(view.convert(view.bounds, to: nil)).maxY
+        let delta = screen.visibleFrame.maxY - contentTop
+        guard abs(delta) > 0.5 else { return }
+        window.setFrameOrigin(NSPoint(x: window.frame.minX, y: window.frame.origin.y + delta))
+    }
+
+    /// 팝오버는 내용 크기가 바뀌면("더 보기"/"간략히 보기") 앵커 기준으로 자리를 다시
+    /// 잡아 끌어올린 위치를 잃는다. 크기·위치 변화를 관찰해 그때마다 다시 붙인다.
+    ///
+    /// 보정을 다음 런루프로 미루는 이유: 알림이 팝오버가 자리를 다시 잡기 *전에* 오는
+    /// 경우가 있어(접을 때), 같은 패스에서 고치면 곧바로 되돌려진다.
+    private func observePopoverResize() {
+        guard let window = popover.contentViewController?.view.window else { return }
+        stopObservingPopoverResize()
+        let center = NotificationCenter.default
+        popoverResizeObserver = [NSWindow.didResizeNotification, NSWindow.didMoveNotification]
+            .map { name in
+                center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated { self?.raisePopoverToMenuBar() }
+                    }
+                }
+            }
+    }
+
+    private func stopObservingPopoverResize() {
+        if let observers = popoverResizeObserver as? [Any] {
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
+        popoverResizeObserver = nil
     }
 
     // MARK: 빈 설정 창 차단

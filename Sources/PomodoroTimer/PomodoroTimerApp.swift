@@ -53,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var menuBarFont = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
     /// 팝오버 크기 변화 관찰자(열려 있는 동안만 유지).
     private var popoverResizeObserver: Any?
+    /// 팝오버가 마지막으로 닫힌 시각(아이콘 클릭이 곧바로 다시 열지 않게 막는 데 쓴다).
+    private var popoverClosedAt: Date?
     /// 상태바 아이템 고정 폭(가장 넓은 "🍅 00:00" 기준, 한 번만 계산해 계속 고정).
     private var runningLength: CGFloat = NSStatusItem.variableLength
 
@@ -155,17 +157,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if popover.isShown {
             stopObservingPopoverResize()
             popover.performClose(sender)
-        } else {
-            popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-            raisePopoverToMenuBar()
-            observePopoverResize()
+            return
         }
+        // 아이콘 클릭으로 닫은 직후라면 열지 않는다.
+        //
+        // transient 팝오버는 "바깥 클릭"에 스스로 닫히고, 상태바 아이콘도 팝오버 바깥이다.
+        // mouse-down에 팝오버가 먼저 닫히고 mouse-up에 이 액션이 오므로, 그대로 두면
+        // isShown이 이미 false여서 곧바로 다시 열려 "닫히지 않는" 것처럼 보인다.
+        // (카운트다운 중에는 매초 갱신 때문에 이 순서가 더 자주 발생한다.)
+        if let closedAt = popoverClosedAt, Date().timeIntervalSince(closedAt) < 0.25 {
+            popoverClosedAt = nil
+            return
+        }
+
+        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
+        raisePopoverToMenuBar()
+        observePopoverResize()
     }
 
     /// 팝오버가 닫히면(바깥 클릭 포함) 정리하고, 펼쳐져 있던 패널을 접게 알린다 —
     /// 다시 열면 접힌 상태로 시작한다.
     func popoverDidClose(_ notification: Notification) {
+        popoverClosedAt = Date()
         stopObservingPopoverResize()
         NotificationCenter.default.post(name: .controlPanelDidClose, object: nil)
     }
@@ -202,8 +216,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popoverResizeObserver = [NSWindow.didResizeNotification, NSWindow.didMoveNotification]
             .map { name in
                 center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    // 약한 참조를 먼저 상수로 풀어둔다 — 중첩 클로저가 `weak self`
+                    // 변수를 그대로 캡처하면 동시성 검사에서 거부된다.
+                    guard let self else { return }
                     DispatchQueue.main.async {
-                        MainActor.assumeIsolated { self?.raisePopoverToMenuBar() }
+                        MainActor.assumeIsolated { self.raisePopoverToMenuBar() }
                     }
                 }
             }
